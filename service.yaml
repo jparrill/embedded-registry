@@ -6,13 +6,13 @@ metadata:
     name: kubeframe-registry
   name: kubeframe-registry
   annotations:
-    service.beta.openshift.io/serving-cert-secret-name: kubeframe-registry
+    service.beta.openshift.io/serving-cert-secret-name: kubeframe-registry-tls
 spec:
   selector:
     name: kubeframe-registry
   ports:
   - name: registry
-    port: 5000
+    port: 443
     protocol: TCP
     targetPort: 5000
   sessionAffinity: None

@@ -11,20 +11,23 @@ PULL_SECRET ?= pull_secret.json
 
 default: deploy
 
-deploy:
-	@oc create namespace $(NS)
-	@oc -n $(NS) create configmap registry-conf --from-file=registry-config.yaml
-	@oc -n $(NS) create -f deployment.yaml
-	@oc -n $(NS) create -f service.yaml
-	#oc -n ${NS} create route edge ${NS} --service=${NS} --port=app --insecure-policy=Redirect
+deploy: create_ns
+	@oc -n $(NS) create configmap registry-conf --from-file=config.yml -o yaml --dry-run=client | oc apply -f -
+	@oc -n $(NS) create -f deployment.yaml -o yaml --dry-run=client | oc apply -f -
+	@oc -n $(NS) create -f service.yaml -o yaml --dry-run=client | oc apply -f -
+	@oc -n ${NS} create route reencrypt ${NS} --service=${NS} --port=registry --insecure-policy=Redirect -o yaml --dry-run=client | oc apply -f -
 
-create_secret:
+create_secret: create_ns
 	@mkdir -p ./$(BUILD_DIR)
 	@htpasswd -bBc  $(addsuffix /htpasswd,$(BUILD_DIR)) $(REG_US) $(REG_PASS)
-	@oc -n $(NS) create secret generic $(SECRET) --from-file=./$(BUILD_DIR)/htpasswd
+	@oc -n $(NS) create secret generic $(SECRET) --from-file=$(addsuffix /htpasswd,$(BUILD_DIR)) -o yaml --dry-run=client | oc apply -f -
+
+create_ns:
+	@oc create namespace $(NS) -o yaml --dry-run=client | oc apply -f -
 
 create_ps:
-	@podman login $(DESTINATION_REGISTRY) -u $(REG_US) -p $(REG_PASS) --authfile=$(BUILD_DIR)/$(PULL_SECRET)
+	$(eval DESTINATION_REGISTRY=$(shell oc -n $(NS) get route kubeframe-registry -o jsonpath={.status.ingress[0].host}):443)
+	@podman login $(DESTINATION_REGISTRY) -u $(REG_US) -p $(REG_PASS) --authfile=$(addsuffix $(PULL_SECRET),$(BUILD_DIR))
 
 clean:
 	@oc -n $(NS) delete -f service.yaml -f deployment.yaml

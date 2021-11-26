@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,12 +25,16 @@ spec:
           volumeMounts:
             - name: data
               mountPath: "/var/lib/registry"
-            - name: certs
+            - name: certs-secret
               mountPath: "/certs"
               readOnly: true
-            - name: auth
+            - name: auth-secret
               mountPath: "/auth"
               readOnly: true
+            - name: registry-conf
+              mountPath: "/etc/docker/registry"
+              readOnly: true
+              subpath: config.yml
           env:
             - name: REGISTRY_AUTH
               value: "htpasswd"
@@ -41,13 +46,18 @@ spec:
               value: "/certs/tls.crt"
             - name: REGISTRY_HTTP_TLS_KEY
               value: "/certs/tls.key"
+            - name: REGISTRY_HTTP_SECRET
+              value: "ALongRandomSecretForRegistry"
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: data-pvc
-        - name: certs
+        - name: certs-secret
           secret:
-            secretName: certs-secret
-        - name: auth
+            secretName: kubeframe-registry-tls
+        - name: auth-secret
           secret:
-            secretName: auth-secret
+            secretName: auth
+        - name: registry-conf
+          configMap:
+            name: registry-conf
