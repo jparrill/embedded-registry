@@ -13,8 +13,9 @@ default: deploy
 
 deploy: create_ns
 	@oc -n $(NS) create configmap registry-conf --from-file=config.yml -o yaml --dry-run=client | oc apply -f -
-	@oc -n $(NS) create -f deployment.yaml -o yaml --dry-run=client | oc apply -f -
-	@oc -n $(NS) create -f service.yaml -o yaml --dry-run=client | oc apply -f -
+	@oc -n $(NS) create -f manifests/deployment.yaml -o yaml --dry-run=client | oc apply -f -
+	@oc -n $(NS) create -f manifests/service.yaml -o yaml --dry-run=client | oc apply -f -
+	@oc -n $(NS) create -f manifests/pvc-registry.yaml -o yaml --dry-run=client | oc apply -f -
 	@oc -n ${NS} create route reencrypt ${NS} --service=${NS} --port=registry --insecure-policy=Redirect -o yaml --dry-run=client | oc apply -f -
 
 create_secret: create_ns
@@ -30,5 +31,5 @@ create_ps:
 	@podman login $(DESTINATION_REGISTRY) -u $(REG_US) -p $(REG_PASS) --authfile=$(addsuffix $(PULL_SECRET),$(BUILD_DIR))
 
 clean:
-	@oc -n $(NS) delete -f service.yaml -f deployment.yaml
+	@oc -n $(NS) delete -k manifests/ 
 	@oc -n $(NS) delete secret $(SECRET)
